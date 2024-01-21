@@ -1,12 +1,13 @@
 from rest_framework import serializers
-
-from  crowapp.models import(
-    Blogger,
-    Article, 
+from crowapp.models import (
+    User,
+    Article,
 )
+
+
 class BloggerSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Blogger
+        model = User
         fields = '__all__'
 
 

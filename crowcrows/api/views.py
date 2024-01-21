@@ -13,7 +13,7 @@ from .serializer import (
 
 from crowapp.models import (
     Article,
-    Blogger,
+    User,
 )
 
 @api_view(['GET'])
