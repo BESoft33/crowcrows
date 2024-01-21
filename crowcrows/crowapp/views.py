@@ -6,7 +6,7 @@ from django.contrib import messages
 from .forms import (LoginForm, SignupForm)
 
 from .models import(
-     Blogger, Article
+     User, Article
 )
 from api.serializer import (
     BloggerSerializer,
