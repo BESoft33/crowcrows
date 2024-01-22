@@ -9,7 +9,7 @@ from .models import(
      User, Article
 )
 from api.serializer import (
-    BloggerSerializer,
+    UserSerializer,
     ArticleSerializer,
 )
 
