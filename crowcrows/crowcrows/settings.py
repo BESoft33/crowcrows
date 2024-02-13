@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'ckeditor',
     'ckeditor_uploader',
     'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -117,6 +118,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = 'crowapp/static/'
+HIGHLIGHT_URL = 'highlight/'
 
 MEDIA_URL = 'crowapp/media/'
 
@@ -137,3 +139,7 @@ AUTH_USER_MODEL = 'crowapp.User'
 CKEDITOR_CONFIGS = CKEDITOR_CONFIGS
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_ALLOW_NONIMAGE_FILES = False
+
+
+
+
