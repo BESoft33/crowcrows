@@ -1,25 +1,31 @@
 from django import forms
+from .models import Article, User
+from ckeditor.widgets import CKEditorWidget
 
 
-class SignupForm(forms.Form):
-    first_name = forms.CharField(max_length=30, label='First Name')
-    last_name = forms.CharField(max_length=30, label='Last Name')
-    user_email = forms.EmailField(max_length=100, label='Email')
-    user_password = forms.CharField(
-        max_length=15,
-        min_length=8,
-        label='Password',
-        help_text='Password must be of length 8 characters to 15 characters')
-    verify_password = forms.CharField(max_length=15, min_length=8, label='Repeat Password')
+class SignupForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'display_name', 'email', 'password')
 
 
-class ResetPasswordForm(forms.Form):
+class ResetPasswordForm(forms.ModelForm):
     old_password = forms.CharField(max_length=15, min_length=8, label='Old Password', )
     new_password = forms.CharField(max_length=15, min_length=8, label='New Password'),
     verify_password = forms.CharField(max_length=15, min_length=8, label='Repeat New Password'),
 
 
-class LoginForm(forms.Form):
-    user_email = forms.EmailField(max_length=100)
-    user_password = forms.CharField(max_length=15, min_length=8,
-                                    help_text='Password must be of length 8 characters to 15 characters')
+class LoginForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('email', 'password')
+
+class ArticleForm(forms.ModelForm):
+    from ckeditor_uploader.widgets import CKEditorUploadingWidget
+    content = forms.CharField(widget=CKEditorUploadingWidget())
+    class Meta:
+        model = Article
+        fields = ("title", "published_on", "content")
+        widgets = {
+
+        }
