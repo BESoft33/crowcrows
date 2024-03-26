@@ -1,67 +1,175 @@
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import authentication, permissions
 from rest_framework import status
-from rest_framework.response import Response
 from django.http import Http404
-
 from .serializer import (
     ArticleSerializer,
-    BloggerSerializer,
+    UserSerializer,
 )
 
 from crowapp.models import (
     Article,
     User,
+    Author,
+    Editor,
 )
 
-class ArticleList(APIView):
-    permission_classes = []
 
-    def get(self, request):
-        articles = Article.objects.filter(published=True)
+class ArticleListView(APIView):
+    def get(self, request, format=None):
+        articles = Article.objects.all()
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data)
-    
-    def post(self, request):
-        title = request.POST.get('title')
-        content = request.POST.get('content')
-        created_by = request.user
 
-        article = Article.objects.create(title=title, content=content, created_by=created_by)
-        if article:
-            return Response({"message": "Article created successfully!"})
-        return Response({"message": "Could not create article!"})
-    
-class ArticleDetail(APIView):
-    permission_classes = []
+    def post(self, request, format=None):
+        serializer = ArticleSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def get_object(self, id):
+
+class ArticleDetailView(APIView):
+    def get_object(self, pk):
         try:
-            return Article.objects.get(id=id)
+            return Article.objects.get(pk=pk)
         except Article.DoesNotExist:
-            raise Http404    
-        
-    def get(self, request, id):
-        article = self.get_object(id=id)
+            raise Http404
+
+    def get(self, request, pk):
+        article = self.get_object(pk)
         serializer = ArticleSerializer(article)
-        return Response(serializer.data)
+        return Response(serializer.data, status.HTTP_200_OK)
 
-    def put(self, request, id):
-        article = self.get_object(id=id)
-
+    def put(self, request, pk):
+        article = self.get_object(pk)
         serializer = ArticleSerializer(article, data=request.data)
-
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def delete(self, request, id):
-        article = self.get_object(id=id)
-        serializer = ArticleSerializer(article, data=article)
+        return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request, pk):
+        article = self.get_object(pk)
+        serializer = ArticleSerializer(article, data={"hide":True})
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserListView(APIView):
+    def get(self, request):
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(serializer.error_messages, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserDetailsView(APIView):
+    def get_object(self, pk):
+        try:
+            return User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user, request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        user = self.get_object(pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AuthorListView(APIView):
+    def get(self, request):
+        users = Author.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AuthorDetailsView(APIView):
+    def get_object(self, pk):
+        try:
+            return Author.objects.get(pk=pk)
+        except User.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user, request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        user = self.get_object(pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EditorListView(APIView):
+    def get(self, request):
+        users = Editor.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EditorDetailsView(APIView):
+    def get_object(self, pk):
+        try:
+            return Editor.objects.get(pk=pk)
+        except User.DoesNotExist:
+            raise Http404
+
+    def get(self, request, pk):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        user = self.get_object(pk)
+        serializer = UserSerializer(user, request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        user = self.get_object(pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

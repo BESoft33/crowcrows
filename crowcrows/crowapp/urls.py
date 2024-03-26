@@ -6,6 +6,7 @@ from django.conf import settings
 
 urlpatterns = [
     path('', views.home),
+    path('article/new/', views.article, name='new_article'),
     path('article/<str:slug>', views.article, name='article'),
     path('signup/', views.signup, name='signup'),
     path('login/', views.login_view, name='login'),  

@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 import os
 from pathlib import Path
 from .ckeditor_config import CKEDITOR_CONFIGS
+from datetime import timedelta
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -95,8 +97,6 @@ REST_FRAMEWORK = {
     )
 }
 
-from datetime import timedelta
-
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
@@ -135,6 +135,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_URL = 'crowapp/static/'
+HIGHLIGHT_URL = 'highlight/'
 
 MEDIA_URL = 'crowapp/media/'
 
@@ -155,3 +156,7 @@ AUTH_USER_MODEL = 'crowapp.User'
 CKEDITOR_CONFIGS = CKEDITOR_CONFIGS
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_ALLOW_NONIMAGE_FILES = False
+
+
+
+

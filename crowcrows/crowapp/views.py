@@ -2,25 +2,30 @@ from django.shortcuts import render, redirect, reverse
 from django.contrib.auth.models import User
 from django.contrib.auth import logout,authenticate,login
 from django.contrib import messages
+from django.db.models.signals import pre_save
 
 from .forms import (LoginForm, SignupForm)
 
 from .models import(
-     User, Article
+    User, Article
 )
+
+from .forms import(
+    ArticleForm
+)
+
 from api.serializer import (
-    BloggerSerializer,
+    UserSerializer,
     ArticleSerializer,
 )
 
 #general views
 def home(request):
     art = Article.objects.all()
-    # print(article.title)
     return render(request,'base/home.html', {"article": art})
 
 def article(request, slug):
-    return render(request, 'base/article.html',{"article":Article.objects.get(slug=slug)})
+    return render(request, 'articles/article.html',{"article":Article.objects.get(slug=slug)})
 
 def login_view(request):
     form = LoginForm()
@@ -32,12 +37,10 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         print(user)
         if user:
-            print("Logged in")
-            messages.success(request,('Logged in successfully!'))
             login(request,user)
+            messages.success(request,('Logged in successfully!'))
             return redirect('/') 
         else:
-            print("error")
             messages.error(request,('Incorrect credentials. Try again.'))
             return redirect('login')
     else:
@@ -50,15 +53,27 @@ def logout_view(request):
 def signup(request):
     form = SignupForm()
     if request.method == 'POST':
-        # form = SignupForm()
         first_name = request.POST.get("first_name")
         last_name = request.POST.get("last_name")
         email = request.POST.get("email")
         password = request.POST.get("password")
-        print(first_name,last_name,email,password)
-        user = User.objects.create_user(first_name=first_name, last_name=last_name, email=email, password=password, username=str(last_name)+'.'+str(first_name))
+        user = User.objects.create_user(first_name=first_name, last_name=last_name, email=email, password=password)
         user.save()
         return redirect('login')
 
     return render(request, 'base/signup.html', {'form':form}) 
 
+def article(request):
+    form = ArticleForm()
+    if request.method == 'POST':
+        form = ArticleForm(request.POST)
+        if form.is_valid():
+            form.instance.created_by = request.user
+            form.save()
+            return redirect('/')
+        else:
+            message = "could not save form"
+            return render(request, 'articles/article_form.html', {'message': message, 'form':form})
+    else:
+        return render(request, 'articles/article_form.html', {'form': form})
+    
