@@ -1,8 +1,11 @@
 from django.urls import path, include
 
-from .views import *
+from .views import (
+    ArticleList,
+    ArticleDetail
+)
 
 urlpatterns = [
-    path('',api_overviev, name="overview"),
-    path('articles/', all_articles)
+    path('articles/', ArticleList.as_view()),
+    path('article/<int:id>', ArticleDetail.as_view()),
 ]
