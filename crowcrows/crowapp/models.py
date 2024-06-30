@@ -1,46 +1,95 @@
 from django.db import models
-from django.utils.text import slugify
-from django.contrib.auth.models import AbstractUser, PermissionsMixin
-from .managers import (UserManager, AuthorManager, EditorManager, SubscriberManager)
-from ckeditor.fields import RichTextField
-from ckeditor_uploader.fields import RichTextUploadingField
+from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.auth.models import AbstractUser
+from .managers import (UserManager, AuthorManager, EditorManager, ModeratorManager, AdminManager)
 
+
+
+# User roles
+AUTHOR = 'AUTHOR'
+EDITOR = 'EDITOR'
+MODERATOR  = 'MODERATOR'
+ADMIN = 'ADMIN'
+READER = 'READER'
+
+# User Activities
+CREATE, READ, UPDATE, DELETE = "Create", "Read", "Update", "Delete"
+LOGIN, LOGOUT, LOGIN_FAILED = "Login", "Logout", "Login Failed"
+ACTION_TYPES = [
+    (CREATE, CREATE),
+    (READ, READ),
+    (UPDATE, UPDATE),
+    (DELETE, DELETE),
+    (LOGIN, LOGIN),
+    (LOGOUT, LOGOUT),
+    (LOGIN_FAILED, LOGIN_FAILED),
+]
+
+SUCCESS, FAILED = "Success", "Failed"
+ACTION_STATUS = [(SUCCESS, SUCCESS), (FAILED, FAILED)]
 
 class User(AbstractUser):
-    SUBSCRIBED_READER = 'SUBSCRIBED_READER'
-    GENERAL_READER = 'GENERAL_READER'
-    AUTHOR = 'AUTHOR'
-    EDITOR = 'EDITOR'
-    ADMIN = 'ADMIN'
 
     USER_ROLE = (
-        (SUBSCRIBED_READER, 'subscriber'),
-        (GENERAL_READER, 'reader'),
+        (READER, 'reader'),
         (AUTHOR, 'author'),
         (EDITOR, 'editor'),
-        (ADMIN, 'admin')
+        (MODERATOR, 'moderator'),
+        (ADMIN, 'admin'),
     )
+    username=None # To avoid errors because the django team decided to keep default username field required even if I set USERNAME_FIELD to email.
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
-    display_name = models.CharField(max_length=255, default=first_name)
+    display_name = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(unique=True)
     profile_img = models.ImageField(upload_to='images', default='placeholder.png')
-    role = models.CharField(choices=USER_ROLE, max_length=25)
+    role = models.CharField(choices=USER_ROLE, max_length=25, default=READER)
     last_login = models.DateTimeField(blank=True, null=True)
     current_login_ip = models.GenericIPAddressField(blank=True, null=True)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
+    EMAIL_FIELD = 'email'
+    REQUIRED_FIELDS = ['first_name', 'last_name']
 
     objects = UserManager()
 
     def __str__(self):
         return self.first_name
+    
+    def get_display_name(self):
+        return self.display_name if self.display_name else self.first_name
+    
+    def full_name(self):
+        return self.first_name+ ' '+self.last_name
+
 
     class Meta:
         permissions = [('can_view_article', 'Can read an Article')]
 
+
+UserModel = get_user_model()
+
+
+class ActivityLog(models.Model):
+    actor = models.ForeignKey(UserModel, on_delete=models.CASCADE, null=True)
+    action_type = models.CharField(choices=ACTION_TYPES, max_length=15)
+    action_time = models.DateTimeField(auto_now_add=True)
+    remarks = models.TextField(blank=True, null=True)
+    status = models.CharField(choices=ACTION_STATUS, max_length=7, default=SUCCESS)
+    data = models.JSONField(default=dict)
+
+    # for generic relations
+    content_type = models.ForeignKey(
+        ContentType, models.SET_NULL, blank=True, null=True
+    )
+    object_id = models.PositiveIntegerField(blank=True, null=True)
+    content_object = GenericForeignKey()
+
+    def __str__(self) -> str:
+        return f"{self.action_type} by {self.actor} on {self.action_time}"
 
 class Author(User):
     objects = AuthorManager()
@@ -53,7 +102,6 @@ class Author(User):
             ('can_publish_article', 'Can publish an Article'),
             ('can_schedule_publish_article', 'Can schedule an Article to publish')
         ]
-
 
 class Editor(User):
     objects = EditorManager()
@@ -73,54 +121,43 @@ class Editor(User):
             ('can_view_author', 'Can view the author of article')
         ]
 
-
-class Subscriber(User):
-    objects = SubscriberManager()
-
+class Moderator(User):
+    objects = ModeratorManager()
     class Meta:
         proxy = True
+        permissions = [
+            ('can_add_editorial', 'Can create an Editorial'),
+            ('can_change_editorial', 'Can modify an Editorial'),
+            ('can_view_editorial', 'Can view an Editorial'),
+            ('can_delete_editorial', 'Can delete an Editorial'),
+            ('can_schedule_publish_editorial', 'Can schedule the Editorial to publish'),
+            ('can_change_article', 'Can update an Article'),
+            ('can_view_article', 'Can view an Article'),
+            ('can_delete_article', 'Can delete an Article'),
+            ('can_approve_article', 'Can approve an Article to publish'),
+            ('can_schedule_publish_article', 'Can schedule an Article to publish'),
+            ('can_view_author', 'Can view the author of article'),
+            ('can_delete_author', 'Can delete the author'),
+        ]
 
-
-class Article(models.Model):
-    title = models.CharField(max_length=128, default='')
-    published_on = models.DateTimeField(null=True, blank=True)
-    content = RichTextUploadingField()
-    image = models.ImageField(upload_to='images', blank=True, null=True)
-    hide = models.BooleanField(default=False)
-    published = models.BooleanField(default=False)
-    slug = models.SlugField(max_length=128, unique=True, blank=True, null=True)
-    created_by = models.ForeignKey(to=Author, on_delete=models.DO_NOTHING, related_name='author')
-    approved_by = models.OneToOneField(to=Editor, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='approved_by')
-    approved_on = models.DateTimeField(null=True, blank=True)
-    created_on = models.DateTimeField(auto_now=True)
-    updated_on = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.title
-
-    def save(self, *args, **kwargs):
-        if self.slug:
-            super().save(*args, **kwargs)
-        else:
-            self.slug = slugify(self.title)
-            super().save(*args, **kwargs)
-
-
-class Editorial(models.Model):
-    title = models.CharField(max_length=255)
-    content = RichTextField()
-    slug = models.SlugField(max_length=128, unique=True)
-    created_by = models.ForeignKey(to=Editor, on_delete=models.DO_NOTHING)
-    created_on = models.DateTimeField(auto_now=True)
-    last_update_on = models.DateTimeField(auto_now_add=True)
-    published_on = models.DateTimeField()
-
-    def __str__(self):
-        return f"{self.created_by} - {self.title}"
-
-    def save(self, *args, **kwargs):
-        if self.slug:
-            super().save(*args, **kwargs)
-        else:
-            self.slug = slugify(self.title)
-            super().save(*args, **kwargs)
+class Admin(User):
+    objects = AdminManager()
+    class Meta:
+        proxy = True
+        permissions = [
+            ('can_add_editorial', 'Can create an Editorial'),
+            ('can_change_editorial', 'Can modify an Editorial'),
+            ('can_view_editorial', 'Can view an Editorial'),
+            ('can_delete_editorial', 'Can delete an Editorial'),
+            ('can_schedule_publish_editorial', 'Can schedule the Editorial to publish'),
+            ('can_add_article', 'Can add an Article'),
+            ('can_change_article', 'Can update an Article'),
+            ('can_view_article', 'Can view an Article'),
+            ('can_delete_article', 'Can delete an Article'),
+            ('can_approve_article', 'Can approve an Article to publish'),
+            ('can_schedule_publish_article', 'Can schedule an Article to publish'),
+            ('can_view_author', 'Can view the author of article'),
+            ('can_add_author', 'Can add a new Author'),
+            ('can_change_author', 'Can modify an Author'),
+            ('can_delete_author', 'Can delete the author'),
+        ]

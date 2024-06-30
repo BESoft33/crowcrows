@@ -1,5 +1,5 @@
 from django import forms
-from .models import Article, User
+from .models import User
 from ckeditor.widgets import CKEditorWidget
 
 
@@ -20,12 +20,4 @@ class LoginForm(forms.ModelForm):
         model = User
         fields = ('email', 'password')
 
-class ArticleForm(forms.ModelForm):
-    from ckeditor_uploader.widgets import CKEditorUploadingWidget
-    content = forms.CharField(widget=CKEditorUploadingWidget())
-    class Meta:
-        model = Article
-        fields = ("title", "published_on", "content")
-        widgets = {
 
-        }

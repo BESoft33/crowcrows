@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'crowapp',
     'api',
     'authentication',
+    'blog',
     'ckeditor',
     'ckeditor_uploader',
     'rest_framework',

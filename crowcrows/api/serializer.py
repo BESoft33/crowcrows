@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from crowapp.models import (
     User,
-    Article,
 )
+from blog.models import Article
 
 
 class UserSerializer(serializers.ModelSerializer):
