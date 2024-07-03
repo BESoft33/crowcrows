@@ -1,50 +1,58 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
-from django.contrib.auth import logout,authenticate,login
+from django.contrib.auth import logout, authenticate, login
 from django.contrib import messages
-from django.db.models.signals import pre_save
-
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
 from .forms import (LoginForm, SignupForm)
 
-from .models import(
+from .models import (
     User
 )
 
 
 def login_view(request):
     form = LoginForm()
-    if request.method=='POST':
+    if request.method == 'POST':
         username = request.POST.get("username")
         password = request.POST.get("password")
-        print(username,password)
+        print(username, password)
 
         user = authenticate(request, username=username, password=password)
         if user:
-            login(request,user)
-            messages.success(request,('Logged in successfully!'))
-            return redirect('/') 
+            login(request, user)
+            messages.success(request, ('Logged in successfully!'))
+            return redirect('/')
         else:
-            messages.error(request,('Incorrect credentials. Try again.'))
+            messages.error(request, ('Incorrect credentials. Try again.'))
             return redirect('login')
     else:
-        return render(request,'base/login.html',{'form':form})
+        return render(request, 'base/login.html', {'form': form})
+
 
 def logout_view(request):
     logout(request)
     return redirect('/')
 
+@csrf_exempt
 def signup(request):
     form = SignupForm()
     if request.method == 'POST':
-        first_name = request.POST.get("first_name")
-        last_name = request.POST.get("last_name")
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-        user = User.objects.create_user(first_name=first_name, last_name=last_name, email=email, password=password)
-        user.save()
-        return redirect('login')
+        try:
+            data = json.loads(request.body)
+            first_name = data.get("firstname")
+            last_name = data.get("lastname")
+            email = data.get("email")
+            password = data.get("password")
+            password_confirm = data.get("passwordRepeat")
+            if password == password_confirm:
+                user = User.objects.create_user(first_name=first_name, last_name=last_name, email=email, password=password)
+                user.save()
+                return JsonResponse({'status': 'success', 'redirect_url': 'login'})
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Passwords do not match'})
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'})
+    return render(request, 'base/signup.html', {'form': form})
 
-    return render(request, 'base/signup.html', {'form':form}) 
-
-
-    
