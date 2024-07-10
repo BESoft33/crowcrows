@@ -8,12 +8,13 @@ from .views import (
     AuthorListView,
     AuthorDetailsView,
     EditorListView,
-    EditorDetailsView
+    EditorDetailsView, ArticleCreateView
 )
 
 urlpatterns = [
     path('auth/', include('rest_framework.urls')),
     path('articles/', ArticleListView.as_view(), name='articles'),
+    path('create/', ArticleCreateView.as_view(), name='article-create'),
     path('article/<str:slug>/', ArticleDetailView.as_view(), name='article'),
     path('users/', UserListView.as_view(), name='users'),
     path('user/<int:pk>/', UserDetailsView.as_view(), name='user'),

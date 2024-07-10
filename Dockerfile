@@ -1,16 +1,30 @@
+# Use an official Python runtime as a parent image
 FROM python:3.8
 
+# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-WORKDIR /app
+# Set the working directory in the container
+WORKDIR /usr/src/crowcrows
 
-COPY ./requirements.txt /app
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the requirements file and install dependencies
+COPY ./requirements.txt ./requirements.txt
 
-COPY ./crowcrows /app
+RUN python -m pip install --upgrade pip
+RUN python -m pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application code to the working directory
+COPY crowcrows/ .
+
+# Copy the entrypoint script into the container
+COPY entrypoint.sh ./entrypoint.sh
+
+# Ensure the entrypoint script is executable
+RUN chmod +x ./entrypoint.sh
+
+# Expose port 8000 to the outside world
 EXPOSE 8000
 
-CMD ["python", "crowcrows/manage.py", "runserver", "0.0.0.0:8000" ]
-
+# Set the entrypoint script as the container's entrypoint
+#ENTRYPOINT ["./entrypoint.sh"]

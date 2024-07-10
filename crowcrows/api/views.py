@@ -1,9 +1,12 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
+from django.utils import timezone
+from rest_framework_simplejwt.tokens import AccessToken
 
 from .serializer import (
     ArticleSerializer,
@@ -14,19 +17,78 @@ from crowapp.models import (
     User,
     Author,
     Editor,
+    Reader
 )
 from blog.models import Article
 
+
 class ArticleListView(APIView):
-    authentication_classes = []
-    permission_classes = []
-    
-    def get(self, request, format=None):
-        articles = Article.objects.all()
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        articles = Article.objects.filter(published_on__lt=timezone.now())
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data)
 
-    def post(self, request, format=None):
+
+class ArticleCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_user(self, authorization=None):
+        if authorization and authorization.startswith('Bearer '):
+            token = authorization.split(' ')[1]
+            try:
+                access_token = AccessToken(token)
+                user_id = access_token['user_id']
+                return Author.objects.get(id=user_id)
+            except ObjectDoesNotExist as e:
+                return None
+        return Response("Authorization header required.", status=status.HTTP_401_UNAUTHORIZED)
+    def post(self, request):
+        user = self.get_user(request.headers.get('Authorization'))
+        serializer = ArticleSerializer(data=request.data)
+
+        if serializer.is_valid() and user:
+            serializer.save(created_by=user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk=None):
+        self.get_user(request.headers.get('Authorization'))
+        article = Article.objects.filter(pk=pk, hide=False)
+        serializer = ArticleSerializer(article, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            if 'approved_by' in request.data:
+                self.approve_article(article, request.user)
+            elif 'published' in request.data and request.data['published'] is True:
+                self.publish_article(article)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def publish_article(self, article):
+        if not article.published:
+            article.published = True
+            article.published_on = timezone.now()
+            article.save()
+
+    def approve_article(self, article, user):
+        if not article.approved_by:
+            article.approved_by = user
+            article.approved_on = timezone.now()
+            article.save()
+
+
+class AuthorArticleListView(APIView):
+    authentication_classes = []
+
+    def get(self, request):
+        articles = Article.objects.filter(created_by=request.user)
+        serializer = ArticleSerializer(articles, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
         serializer = ArticleSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -59,35 +121,28 @@ class ArticleDetailView(APIView):
 
     def delete(self, request, slug):
         article = self.get_object(slug)
-        serializer = ArticleSerializer(article, data={"hide":True})
+        ArticleSerializer(article, data={"hide": True})
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserListView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        users = User.objects.all()
+        users = Reader.objects.filter(active=True)
         serializer = UserSerializer(users, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(data=serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserDetailsView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
     serializer_class = UserSerializer
 
     def get_object(self, pk):
         try:
-            return User.objects.get(pk=pk)
+            return Reader.objects.get(pk=pk)
         except User.DoesNotExist:
             raise Http404
 
@@ -97,7 +152,6 @@ class UserDetailsView(APIView):
             serializer = UserSerializer(user)
             return Response(serializer.data)
         raise User.DoesNotExist
-
 
     def put(self, request, pk):
         user = self.get_object(pk)
@@ -118,10 +172,10 @@ class UserDetailsView(APIView):
 
 class AuthorListView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        users = Author.objects.all()
+        users = Author.objects.filter(active=True)
         serializer = UserSerializer(users, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
@@ -135,7 +189,7 @@ class AuthorListView(APIView):
 
 class AuthorDetailsView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get_object(self, pk):
         try:
@@ -164,7 +218,7 @@ class AuthorDetailsView(APIView):
 
 class EditorListView(APIView):
     authentication_classes = []
-    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
         users = Editor.objects.all()
@@ -181,7 +235,7 @@ class EditorListView(APIView):
 
 class EditorDetailsView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get_object(self, pk):
         try:
@@ -208,10 +262,9 @@ class EditorDetailsView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class ArticleListView(ActivityLogMixin, APIView):
-    def get(self, request, *args, **kwargs):
-        return Response({"articles": Article.objects.values()})
-
+# class ArticleRListView(ActivityLogMixin, APIView):
+#     def get(self, request, *args, **kwargs):
+#         return Response({"articles": Article.objects.values()})
 
 class PostReadOnlyViewSet(ActivityLogMixin, ReadOnlyModelViewSet):
     queryset = Article.objects.all()

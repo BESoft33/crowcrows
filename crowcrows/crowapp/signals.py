@@ -1,11 +1,10 @@
 from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.dispatch import receiver
 
-from .models import ActivityLog,  LOGIN, LOGIN_FAILED
+from .models import ActivityLog, LOGIN, LOGIN_FAILED
 from django.db.models.signals import post_migrate
 from django.contrib.auth.models import Permission
 from django.contrib.auth.models import Group
-from django.apps import apps
 
 
 def get_client_ip(request):
@@ -15,6 +14,7 @@ def get_client_ip(request):
         if x_forwarded_for
         else request.META.get("REMOTE_ADDR")
     )
+
 
 def get_client_user_agent(request):
     user_agent = request.headers.get("User-Agent")
@@ -31,7 +31,6 @@ def log_user_login(sender, request, user, **kwargs):
 def log_user_login_failed(sender, credentials, request, **kwargs):
     message = f"Login Attempt Failed for email {credentials.get('email')} with ip: {get_client_ip(request)}, user agent {get_client_user_agent(request)}"
     ActivityLog.objects.create(action_type=LOGIN_FAILED, remarks=message)
-
 
 
 author_permissions = [
@@ -83,9 +82,9 @@ def create_groups_and_permissions(sender, **kwargs):
 
         # Clear existing permissions to ensure we start fresh
         group.permissions.clear()
-        
+
         # Iterate over all models in the app
-                # Generate the codename for each permission
+        # Generate the codename for each permission
         try:
             # Retrieve the permission
             permission = Permission.objects.get(codename=permission)
@@ -93,5 +92,3 @@ def create_groups_and_permissions(sender, **kwargs):
             group.permissions.add(permission)
         except Permission.DoesNotExist:
             pass
-            
-

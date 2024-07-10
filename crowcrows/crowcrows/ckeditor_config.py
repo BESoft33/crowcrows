@@ -1,62 +1,118 @@
-CKEDITOR_CONFIGS = {
+CKEDITOR_5_CONFIGS = {
     'default': {
-        'skin': 'moono',
-        # 'skin': 'office2013',
-        'toolbar_Basic': [
-            ['Source', '-', 'Bold', 'Italic']
+        'toolbar': [
+            'undo',
+            'redo',
+            'findAndReplace',
+            '|',
+            'bold',
+            'italic',
+            'strikethrough',
+            'superscript',
+            'subscript',
+            'horizontalLine',
+            'specialCharacters',
+            'code',
+            'codeblock',
+            '|',
+            'sourceEditing',
+            'htmlEmbed',
+            'pageBreak',
+            'showBlocks',
+            '|',
+            'alignment',
+            'fontFamily',
+            'fontSize',
+            'fontColor',
+            'fontBackgroundColor',
+            '|',
+            'bulletedList',
+            'numberedList',
+            'todoList',
+            'outdent',
+            'indent',
+            'link',
+            '|',
+            'uploadImage',
+            'fileUpload',
+            'insertTable',
+            'blockQuote',
+            'mediaEmbed',
+            '|',
+            'heading',
+            '|',
         ],
-        'toolbar_YourCustomToolbarConfig': [
-            {'name': 'document', 'items': ['Source', '-', 'Save', 'NewPage', 'Preview', '-', 'Templates']},
-            {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo']},
-            {'name': 'editing', 'items': ['Find', 'Replace', '-', 'SelectAll']},
-            {'name': 'forms','items': ['Form', 'Checkbox', 'Radio', 'TextField', 'Textarea', 'Select', 'Button', 'HiddenField']},
-            {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
 
-            '/',
-            {'name': 'basicstyles',
-             'items': ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript', '-', 'RemoveFormat']},
-            {'name': 'paragraph',
-             'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-',
-                       'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock', '-', 'BidiLtr', 'BidiRtl', '-',]},
-            {'name': 'insert',
-             'items': ['Image', 'Flash', 'Table', 'HorizontalRule', 'Smiley', 'SpecialChar', 'PageBreak', 'Iframe']},
-            {'name': 'codesnippet', 'items': ['CodeSnippet']},
-            {'name': 'styles', 'items': ['Styles', 'Format', 'Font', 'FontSize']},
-            {'name': 'colors', 'items': ['TextColor', 'BGColor']},
-            {'name': 'tools', 'items': ['Maximize', 'ShowBlocks']},
-            {'name': 'about', 'items': ['About']},
-            {'name': 'yourcustomtools', 'items': [
-                # put the name of your editor.ui.addButton here
-                'Preview',
-                'Maximize',
-
-            ]},
+    },
+    'extends': {
+        'blockToolbar': [
+            'paragraph', 'heading1', 'heading2', 'heading3',
+            '|',
+            'bulletedList', 'numberedList',
+            '|',
+            'blockQuote',
         ],
-        'toolbar': 'YourCustomToolbarConfig',  # put selected toolbar config here
-        'toolbarGroups': [{ 'name': 'document', 'groups': [ 'mode', 'document', 'doctools' ] }],
-        'height': 291,
-        'width': '100%',
-        'filebrowserWindowHeight': 725,
-        'filebrowserWindowWidth': 940,
-        'toolbarCanCollapse': True,
-        'mathJaxLib': '//cdn.mathjax.org/mathjax/2.2-latest/MathJax.js?config=TeX-AMS_HTML',
-        'tabSpaces': 4,
-        'extraPlugins': ','.join([
-            'uploadimage', # the upload image feature
-            # your extra plugins here
-            'div',
-            'autolink',
-            'autoembed',
-            'embedsemantic',
-            'autogrow',
-            'devtools',
-            'widget',
-            'lineutils',
-            'clipboard',
-            'dialog',
-            'dialogui',
-            'elementspath',
-            'codesnippet',
-        ]),
+        'toolbar': {
+            'items': [
+                'undo', 'redo', 'findAndReplace',
+                '|',
+                'heading',
+                '|',
+                'bold', 'italic', 'strikethrough', 'superscript', 'subscript', 'horizontalLine', 'specialCharacters',
+                '|'
+                'code','codeblock',
+                '|',
+                'sourceEditing', 'htmlEmbed', 'pageBreak', 'showBlocks',
+                '|',
+                'alignment', 'fontFamily', 'fontSize', 'fontColor', 'fontBackgroundColor',
+                '|',
+                'bulletedList', 'numberedList', 'todoList', 'outdent', 'indent', 'link',
+                '|',
+                'uploadImage', 'insertTable', 'blockQuote', 'mediaEmbed',
+            ],
+            'shouldNotGroupWhenFull': 'true'
+        },
+        'image': {
+            'toolbar': ['imageTextAlternative', '|', 'imageStyle:alignLeft',
+                        'imageStyle:alignRight', 'imageStyle:alignCenter', 'imageStyle:side', '|'],
+            'styles': [
+                'full',
+                'side',
+                'alignLeft',
+                'alignRight',
+                'alignCenter',
+            ]
+
+        },
+        'table': {
+            'contentToolbar': ['tableColumn', 'tableRow', 'mergeTableCells',
+                               'tableProperties', 'tableCellProperties'],
+            'tableProperties': {
+                # 'borderColors': customColorPalette,
+                # 'backgroundColors': customColorPalette
+            },
+            'tableCellProperties': {
+                # 'borderColors': customColorPalette,
+                # 'backgroundColors': customColorPalette
+            }
+        },
+        'heading': {
+            'options': [
+                    # { model: 'paragraph', title: 'Paragraph'},
+                    # { model: 'heading1', view: 'h1', title: 'Heading 1'},
+                    # { model: 'heading2', view: 'h2', title: 'Heading 2'},
+                    # { model: 'heading3', view: 'h3', title: 'Heading 3'},
+                    # { model: 'heading4', view: 'h4', title: 'Heading 4'},
+                    # { model: 'heading5', view: 'h5', title: 'Heading 5'},
+                    # { model: 'heading6', view: 'h6', title: 'Heading 6'},
+            ]
+        }
+    },
+    'list': {
+        'properties': {
+            'styles': 'true',
+            'startIndex': 'true',
+            'reversed': 'true',
+        }
     }
 }

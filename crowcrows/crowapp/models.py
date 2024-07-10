@@ -3,16 +3,8 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.auth.models import AbstractUser
-from .managers import (UserManager, AuthorManager, EditorManager, ModeratorManager, AdminManager)
-
-
-
-# User roles
-AUTHOR = 'AUTHOR'
-EDITOR = 'EDITOR'
-MODERATOR  = 'MODERATOR'
-ADMIN = 'ADMIN'
-READER = 'READER'
+from .managers import (UserManager, AuthorManager, EditorManager, ModeratorManager, AdminManager, ReaderManager)
+from django.utils.translation import gettext_lazy as _
 
 # User Activities
 CREATE, READ, UPDATE, DELETE = "Create", "Read", "Update", "Delete"
@@ -30,22 +22,22 @@ ACTION_TYPES = [
 SUCCESS, FAILED = "Success", "Failed"
 ACTION_STATUS = [(SUCCESS, SUCCESS), (FAILED, FAILED)]
 
-class User(AbstractUser):
 
-    USER_ROLE = (
-        (READER, 'reader'),
-        (AUTHOR, 'author'),
-        (EDITOR, 'editor'),
-        (MODERATOR, 'moderator'),
-        (ADMIN, 'admin'),
-    )
-    username=None # To avoid errors because the django team decided to keep default username field required even if I set USERNAME_FIELD to email.
+class User(AbstractUser):
+    class Role(models.IntegerChoices):
+        AUTHOR = 1, _("Author")
+        EDITOR = 2, _("Editor")
+        MODERATOR = 3, _("Moderator")
+        ADMIN = 4, _("Admin")
+        READER = 5, _("Reader")
+
+    username = None  # To avoid errors because the django team decided to keep default username field required even if I set USERNAME_FIELD to email.
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     display_name = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(unique=True)
     profile_img = models.ImageField(upload_to='images', default='placeholder.png')
-    role = models.CharField(choices=USER_ROLE, max_length=25, default=READER)
+    role = models.PositiveSmallIntegerField(choices=Role.choices, default=Role.READER)
     last_login = models.DateTimeField(blank=True, null=True)
     current_login_ip = models.GenericIPAddressField(blank=True, null=True)
     last_login_ip = models.GenericIPAddressField(blank=True, null=True)
@@ -58,13 +50,12 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.first_name
-    
+
     def get_display_name(self):
         return self.display_name if self.display_name else self.first_name
-    
-    def full_name(self):
-        return self.first_name+ ' '+self.last_name
 
+    def full_name(self):
+        return self.first_name + ' ' + self.last_name
 
     class Meta:
         permissions = [('can_view_article', 'Can read an Article')]
@@ -91,6 +82,7 @@ class ActivityLog(models.Model):
     def __str__(self) -> str:
         return f"{self.action_type} by {self.actor} on {self.action_time}"
 
+
 class Author(User):
     objects = AuthorManager()
 
@@ -102,6 +94,7 @@ class Author(User):
             ('can_publish_article', 'Can publish an Article'),
             ('can_schedule_publish_article', 'Can schedule an Article to publish')
         ]
+
 
 class Editor(User):
     objects = EditorManager()
@@ -121,8 +114,10 @@ class Editor(User):
             ('can_view_author', 'Can view the author of article')
         ]
 
+
 class Moderator(User):
     objects = ModeratorManager()
+
     class Meta:
         proxy = True
         permissions = [
@@ -140,8 +135,10 @@ class Moderator(User):
             ('can_delete_author', 'Can delete the author'),
         ]
 
+
 class Admin(User):
     objects = AdminManager()
+
     class Meta:
         proxy = True
         permissions = [
@@ -161,3 +158,10 @@ class Admin(User):
             ('can_change_author', 'Can modify an Author'),
             ('can_delete_author', 'Can delete the author'),
         ]
+
+
+class Reader(User):
+    objects = ReaderManager()
+
+    class Meta:
+        proxy = True

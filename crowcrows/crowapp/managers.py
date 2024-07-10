@@ -2,6 +2,7 @@ from django.contrib.auth import models
 from django.db.models.query import QuerySet
 from . import models as user_models
 
+
 class UserManager(models.BaseUserManager):
     def _create_user(self, email, password, first_name, last_name, **extra_fields):
         if not email:
@@ -24,31 +25,39 @@ class UserManager(models.BaseUserManager):
     def create_superuser(self, email, password, first_name, last_name, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', user_models.ADMIN)
+        extra_fields.setdefault('role', user_models.User.Role.ADMIN)
         return self._create_user(email, password, first_name, last_name, **extra_fields)
 
     def create_staffuser(self, email, password, first_name, last_name, **extra_fields):
         extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('role', user_models.MODERATOR)
+        extra_fields.setdefault('role', user_models.User.Role.MODERATOR)
         return self._create_user(email, password, first_name, last_name, **extra_fields)
 
     def create_user(self, email, password, first_name, last_name, **extra_fields):
-        extra_fields.setdefault('role', user_models.READER)
+        extra_fields.setdefault('role', user_models.User.Role.READER)
         return self._create_user(email, password, first_name, last_name, **extra_fields)
+
 
 class EditorManager(models.UserManager):
     def get_queryset(self):
-        return super().get_queryset().filter(role=user_models.EDITOR, is_active= True)
+        return super().get_queryset().filter(role=user_models.User.Role.EDITOR, is_active=True)
 
 
 class AuthorManager(models.UserManager):
     def get_queryset(self):
-        return super().get_queryset().filter(role=user_models.AUTHOR, is_active=True)
-    
+        return super().get_queryset().filter(role=user_models.User.Role.AUTHOR, is_active=True)
+
+
 class ModeratorManager(models.UserManager):
     def get_queryset(self) -> QuerySet:
-        return super().get_queryset().filter(role=user_models.MODERATOR, is_active=True)
-    
+        return super().get_queryset().filter(role=user_models.User.Role.MODERATOR, is_active=True)
+
+
 class AdminManager(models.UserManager):
     def get_queryset(self) -> QuerySet:
-        return super().get_queryset().filter(role=user_models.ADMIN, is_active=True)
+        return super().get_queryset().filter(role=user_models.User.Role.ADMIN, is_active=True)
+
+
+class ReaderManager(models.UserManager):
+    def get_queryset(self) -> QuerySet:
+        return super().get_queryset().filter(role=user_models.User.Role.READER, is_active=True)

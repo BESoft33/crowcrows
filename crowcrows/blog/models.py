@@ -1,21 +1,21 @@
 from django.db import models
 from django.utils.text import slugify
 
-from ckeditor.fields import RichTextField
-from ckeditor_uploader.fields import RichTextUploadingField
+from django_ckeditor_5.fields import CKEditor5Field
 
 from crowapp.models import Author, Editor
+
 
 class Article(models.Model):
     title = models.CharField(max_length=128, default='')
     published_on = models.DateTimeField(null=True, blank=True)
-    content = RichTextUploadingField()
-    image = models.ImageField(upload_to='images', blank=True, null=True)
+    content = CKEditor5Field()
     hide = models.BooleanField(default=False)
     published = models.BooleanField(default=False)
     slug = models.SlugField(max_length=128, unique=True, blank=True, null=True)
     created_by = models.ForeignKey(to=Author, on_delete=models.DO_NOTHING, related_name='author')
-    approved_by = models.OneToOneField(to=Editor, on_delete=models.DO_NOTHING, null=True, blank=True, related_name='approved_by')
+    approved_by = models.ForeignKey(to=Editor, on_delete=models.DO_NOTHING, null=True, blank=True,
+                                    related_name='approved_by')
     approved_on = models.DateTimeField(null=True, blank=True)
     created_on = models.DateTimeField(auto_now=True)
     updated_on = models.DateTimeField(auto_now_add=True)
@@ -33,7 +33,7 @@ class Article(models.Model):
 
 class Editorial(models.Model):
     title = models.CharField(max_length=255)
-    content = RichTextField()
+    content = CKEditor5Field()
     slug = models.SlugField(max_length=128, unique=True)
     created_by = models.ForeignKey(to=Editor, on_delete=models.DO_NOTHING)
     created_on = models.DateTimeField(auto_now=True)
@@ -49,3 +49,4 @@ class Editorial(models.Model):
         else:
             self.slug = slugify(self.title)
             super().save(*args, **kwargs)
+

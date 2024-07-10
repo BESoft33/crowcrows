@@ -5,7 +5,6 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-from .forms import (LoginForm, SignupForm)
 
 from .models import (
     User
@@ -13,11 +12,9 @@ from .models import (
 
 
 def login_view(request):
-    form = LoginForm()
     if request.method == 'POST':
         username = request.POST.get("username")
         password = request.POST.get("password")
-        print(username, password)
 
         user = authenticate(request, username=username, password=password)
         if user:
@@ -27,8 +24,6 @@ def login_view(request):
         else:
             messages.error(request, ('Incorrect credentials. Try again.'))
             return redirect('login')
-    else:
-        return render(request, 'base/login.html', {'form': form})
 
 
 def logout_view(request):
@@ -37,7 +32,6 @@ def logout_view(request):
 
 @csrf_exempt
 def signup(request):
-    form = SignupForm()
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -54,5 +48,5 @@ def signup(request):
                 return JsonResponse({'status': 'error', 'message': 'Passwords do not match'})
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON'})
-    return render(request, 'base/signup.html', {'form': form})
 
+    return JsonResponse({'status': 'error', 'message': 'Only post method is allowed'})

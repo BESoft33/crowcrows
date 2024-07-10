@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 import os
 from pathlib import Path
-from .ckeditor_config import CKEDITOR_CONFIGS
+from .ckeditor_config import CKEDITOR_5_CONFIGS
 from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -41,14 +41,9 @@ INSTALLED_APPS = [
     'api',
     'authentication',
     'blog',
-    'ckeditor',
-    'ckeditor_uploader',
+    'django_ckeditor_5',
     'rest_framework',
     'rest_framework.authtoken',
-    'allauth',
-    'allauth.account',
-    'dj_rest_auth',
-    'dj_rest_auth.registration',
     'corsheaders',
     'rest_framework_simplejwt',
 ]
@@ -59,7 +54,6 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -117,6 +111,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
     'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000'
 
 ]
 
@@ -125,6 +121,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
     'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000'
 
 ]
 
@@ -132,7 +130,9 @@ CORS_ORIGINS_WHITELIST = [
     'http://127.0.0.1:8000',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
-    'http://localhost:3001'
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://localhost:3000'
 
 ]
 
@@ -188,12 +188,13 @@ STATIC_URL = 'crowapp/static/'
 HIGHLIGHT_URL = 'highlight/'
 
 MEDIA_URL = 'crowapp/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+
 
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, "crowapp/static"),
 )
 
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
@@ -203,10 +204,9 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 AUTH_USER_MODEL = 'crowapp.User'
 
-CKEDITOR_CONFIGS = CKEDITOR_CONFIGS
-CKEDITOR_UPLOAD_PATH = "uploads/"
-CKEDITOR_ALLOW_NONIMAGE_FILES = False
-
+CKEDITOR_5_CONFIGS = CKEDITOR_5_CONFIGS
+CKEDITOR_UPLOAD_PATH = "/media/uploads/"
+# CKEDITOR_ALLOW_NONIMAGE_FILES = False
 
 
 
