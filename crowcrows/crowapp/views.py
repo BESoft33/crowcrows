@@ -4,31 +4,21 @@ from django.contrib.auth import logout, authenticate, login
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.utils import IntegrityError
 import json
 
 from .models import (
     User
 )
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
-def login_view(request):
-    if request.method == 'POST':
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        user = authenticate(request, username=username, password=password)
-        if user:
-            login(request, user)
-            messages.success(request, ('Logged in successfully!'))
-            return redirect('/')
-        else:
-            messages.error(request, ('Incorrect credentials. Try again.'))
-            return redirect('login')
-
-
+@csrf_exempt
 def logout_view(request):
-    logout(request)
-    return redirect('/')
+    token = RefreshToken(request.headers['Authorization'])
+    return redirect(f'/token/blacklist/')
+
+
 
 @csrf_exempt
 def signup(request):
@@ -41,12 +31,16 @@ def signup(request):
             password = data.get("password")
             password_confirm = data.get("passwordRepeat")
             if password == password_confirm:
-                user = User.objects.create_user(first_name=first_name, last_name=last_name, email=email, password=password)
+                user = User.objects.create_user(first_name=first_name, last_name=last_name, email=email,
+                                                password=password)
                 user.save()
                 return JsonResponse({'status': 'success', 'redirect_url': 'login'})
             else:
                 return JsonResponse({'status': 'error', 'message': 'Passwords do not match'})
-        except json.JSONDecodeError:
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON'})
+        except json.JSONDecodeError as je:
+            return JsonResponse({'status': 'error', 'message': 'Could not read the provided data.'})
+        except IntegrityError:
+            return JsonResponse(
+                {'status': 'error', 'message': 'An account with provided email address already exists.'})
 
     return JsonResponse({'status': 'error', 'message': 'Only post method is allowed'})
