@@ -40,18 +40,25 @@ class ArticleCreateView(APIView):
             try:
                 access_token = AccessToken(token)
                 user_id = access_token['user_id']
+                print("User id",user_id)
                 return Author.objects.get(id=user_id)
-            except ObjectDoesNotExist as e:
+            except ObjectDoesNotExist:
                 return None
         return Response("Authorization header required.", status=status.HTTP_401_UNAUTHORIZED)
+    
     def post(self, request):
-        user = self.get_user(request.headers.get('Authorization'))
+        user = self.get_user(request.headers.get('Authorization', None))
         serializer = ArticleSerializer(data=request.data)
-
-        if serializer.is_valid() and user:
+        print('-'*20)
+        print("User", user)
+        print("Serializer", serializer.initial_data)
+        print('-'*20)
+        if not user:
+            return Response(data={"status":"error", "message":"Only certain users are allowed to perform this action."})
+        if serializer.is_valid():
             serializer.save(created_by=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, exception=True)
 
     def patch(self, request, pk=None):
         self.get_user(request.headers.get('Authorization'))
