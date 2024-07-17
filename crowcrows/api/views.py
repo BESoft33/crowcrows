@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -8,6 +9,7 @@ from django.http import Http404
 from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 
+from .auth import IsAdmin, IsEditor
 from .serializer import (
     ArticleSerializer,
     UserSerializer,
@@ -24,15 +26,17 @@ from blog.models import Article
 
 class ArticleListView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def get(self, request):
-        articles = Article.objects.filter(published_on__lt=timezone.now())
+        articles = Article.objects.filter(published_on__lte=timezone.now())
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data)
 
 
 class ArticleCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [IsAdmin, IsEditor]
 
     def get_user(self, authorization=None):
         if authorization and authorization.startswith('Bearer '):
@@ -40,21 +44,17 @@ class ArticleCreateView(APIView):
             try:
                 access_token = AccessToken(token)
                 user_id = access_token['user_id']
-                print("User id",user_id)
                 return Author.objects.get(id=user_id)
             except ObjectDoesNotExist:
                 return None
         return Response("Authorization header required.", status=status.HTTP_401_UNAUTHORIZED)
-    
+
     def post(self, request):
         user = self.get_user(request.headers.get('Authorization', None))
         serializer = ArticleSerializer(data=request.data)
-        print('-'*20)
-        print("User", user)
-        print("Serializer", serializer.initial_data)
-        print('-'*20)
         if not user:
-            return Response(data={"status":"error", "message":"Only certain users are allowed to perform this action."})
+            return Response(
+                data={"status": "error", "message": "Only certain users are allowed to perform this action."})
         if serializer.is_valid():
             serializer.save(created_by=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -279,3 +279,37 @@ class PostReadOnlyViewSet(ActivityLogMixin, ReadOnlyModelViewSet):
 
     def get_log_message(self, request) -> str:
         return f"{request.user} is reading blog posts"
+
+
+class StatsView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        filter_params = request.query_params.get('filter', 'all')
+
+        now = timezone.now()
+
+        filter_mapping = {
+            'daily': Q(published_on__date=now.date()),
+            'weekly': Q(published_on__week=now.isocalendar()[1], published_on__year=now.year),
+            'monthly': Q(published_on__month=now.month, published_on__year=now.year),
+            'all': Q()
+        }
+
+        filter_query = filter_mapping.get(filter_params, Q())
+        queryset = Article.objects.filter(filter_query)
+
+        published_articles = queryset.filter(published=True)
+        scheduled_articles = Article.objects.filter(published_on__gt=now)
+        all_articles = Article.objects.exclude(published_on=None)
+        all_authors = all_articles.values('created_by').distinct()
+
+        data = {
+            'total_articles': all_articles.count(),
+            'published_articles': published_articles.count(),
+            'scheduled_articles': scheduled_articles.count(),
+            'total_authors': all_authors.count()
+        }
+
+        return Response(data)
