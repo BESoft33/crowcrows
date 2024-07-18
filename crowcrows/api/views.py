@@ -24,6 +24,7 @@ from blog.models import Article
 
 class ArticleListView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def get(self, request):
         articles = Article.objects.filter(published_on__lt=timezone.now())
