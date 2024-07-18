@@ -3,10 +3,8 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import AccessToken
 
 from .serializer import (
     ArticleSerializer,
@@ -19,7 +17,9 @@ from crowapp.models import (
     Editor,
     Reader
 )
+from .auth import IsEditor, IsAdmin, IsAuthor, IsModerator
 from blog.models import Article
+from .utils import get_user_from_token
 
 
 class ArticleListView(APIView):
@@ -34,35 +34,26 @@ class ArticleListView(APIView):
 
 class ArticleCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [IsAdmin, IsEditor, IsModerator]
 
-    def get_user(self, authorization=None):
-        if authorization and authorization.startswith('Bearer '):
-            token = authorization.split(' ')[1]
-            try:
-                access_token = AccessToken(token)
-                user_id = access_token['user_id']
-                print("User id",user_id)
-                return Author.objects.get(id=user_id)
-            except ObjectDoesNotExist:
-                return None
-        return Response("Authorization header required.", status=status.HTTP_401_UNAUTHORIZED)
-    
+    def get(self, request):
+        articles = Article.objects.filter(published=True)
+        serializer = ArticleSerializer(articles, many=True)
+        return Response(serializer.data)
+
     def post(self, request):
-        user = self.get_user(request.headers.get('Authorization', None))
+        user = get_user_from_token(request.headers.get('Authorization', None))
         serializer = ArticleSerializer(data=request.data)
-        print('-'*20)
-        print("User", user)
-        print("Serializer", serializer.initial_data)
-        print('-'*20)
+
         if not user:
-            return Response(data={"status":"error", "message":"Only certain users are allowed to perform this action."})
+            return Response(
+                data={"status": "error", "message": "Only certain users are allowed to perform this action."})
         if serializer.is_valid():
             serializer.save(created_by=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, exception=True)
 
     def patch(self, request, pk=None):
-        self.get_user(request.headers.get('Authorization'))
         article = Article.objects.filter(pk=pk, hide=False)
         serializer = ArticleSerializer(article, data=request.data, partial=True)
 
@@ -74,6 +65,11 @@ class ArticleCreateView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, slug):
+        article = self.get_object(slug)
+        ArticleSerializer(article, data={"hide": True})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def publish_article(self, article):
         if not article.published:
@@ -118,19 +114,6 @@ class ArticleDetailView(APIView):
         article = self.get_object(slug)
         serializer = ArticleSerializer(article)
         return Response(serializer.data, status.HTTP_200_OK)
-
-    def put(self, request, slug):
-        article = self.get_object(slug)
-        serializer = ArticleSerializer(article, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, slug):
-        article = self.get_object(slug)
-        ArticleSerializer(article, data={"hide": True})
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class UserListView(APIView):
