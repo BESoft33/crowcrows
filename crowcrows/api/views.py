@@ -121,7 +121,7 @@ class UserListView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        users = Reader.objects.filter(active=True)
+        users = Reader.objects.filter(is_active=True)
         serializer = UserSerializer(users, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
