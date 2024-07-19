@@ -8,7 +8,9 @@ from .views import (
     AuthorListView,
     AuthorDetailsView,
     EditorListView,
-    EditorDetailsView, ArticleCreateView
+    EditorDetailsView,
+    ArticleCreateView,
+    StatsView
 )
 
 urlpatterns = [
@@ -21,7 +23,8 @@ urlpatterns = [
     path('authors/', AuthorListView.as_view(), name='users'),
     path('author/<int:pk>/', AuthorDetailsView.as_view(), name='user'),
     path('editors/', EditorListView.as_view(), name='users'),
-    path('editor/<int:pk>/', EditorDetailsView.as_view(), name='user')
+    path('editor/<int:pk>/', EditorDetailsView.as_view(), name='user'),
+    path('stats/', StatsView.as_view(), name='stats'),
 
 ]
 

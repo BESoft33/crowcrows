@@ -3,9 +3,12 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 from django.utils import timezone
+from rest_framework_simplejwt.tokens import AccessToken
 
+from .auth import IsAdmin, IsEditor
 from .serializer import (
     ArticleSerializer,
     UserSerializer,
@@ -28,7 +31,7 @@ class ArticleListView(APIView):
     authentication_classes = []
 
     def get(self, request):
-        articles = Article.objects.filter(published_on__lt=timezone.now())
+        articles = Article.objects.filter(published_on__lte=timezone.now())
         serializer = ArticleSerializer(articles, many=True)
         return Response(serializer.data)
 
@@ -37,10 +40,16 @@ class ArticleCreateView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [IsAdmin, IsEditor, IsModerator]
 
-    def get(self, request):
-        articles = Article.objects.filter(hide=False)
-        serializer = ArticleSerializer(articles, many=True)
-        return Response(serializer.data)
+    def get_user(self, authorization=None):
+        if authorization and authorization.startswith('Bearer '):
+            token = authorization.split(' ')[1]
+            try:
+                access_token = AccessToken(token)
+                user_id = access_token['user_id']
+                return Author.objects.get(id=user_id)
+            except ObjectDoesNotExist:
+                return None
+        return Response("Authorization header required.", status=status.HTTP_401_UNAUTHORIZED)
 
     def post(self, request):
         user = get_user_from_token(request.headers.get('Authorization', None))
@@ -249,3 +258,37 @@ class PostReadOnlyViewSet(ActivityLogMixin, ReadOnlyModelViewSet):
 
     def get_log_message(self, request) -> str:
         return f"{request.user} is reading blog posts"
+
+
+class StatsView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        filter_params = request.query_params.get('filter', 'all')
+
+        now = timezone.now()
+
+        filter_mapping = {
+            'daily': Q(published_on__date=now.date()),
+            'weekly': Q(published_on__week=now.isocalendar()[1], published_on__year=now.year),
+            'monthly': Q(published_on__month=now.month, published_on__year=now.year),
+            'all': Q()
+        }
+
+        filter_query = filter_mapping.get(filter_params, Q())
+        queryset = Article.objects.filter(filter_query)
+
+        published_articles = queryset.filter(published=True)
+        scheduled_articles = Article.objects.filter(published_on__gt=now)
+        all_articles = Article.objects.exclude(published_on=None)
+        all_authors = all_articles.values('created_by').distinct()
+
+        data = {
+            'total_articles': all_articles.count(),
+            'published_articles': published_articles.count(),
+            'scheduled_articles': scheduled_articles.count(),
+            'total_authors': all_authors.count()
+        }
+
+        return Response(data)
