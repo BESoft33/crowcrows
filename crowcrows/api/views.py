@@ -1,4 +1,3 @@
-from django.db.models import Count, Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -13,6 +12,7 @@ from .auth import IsAdmin, IsEditor
 from .serializer import (
     ArticleSerializer,
     UserSerializer,
+    ArticleUpdateSerializer,
 )
 from crowapp.mixins import ActivityLogMixin
 from crowapp.models import (
@@ -21,7 +21,9 @@ from crowapp.models import (
     Editor,
     Reader
 )
+from .auth import IsEditor, IsAdmin, IsAuthor, IsModerator
 from blog.models import Article
+from .utils import get_user_from_token
 
 
 class ArticleListView(APIView):
@@ -36,7 +38,7 @@ class ArticleListView(APIView):
 
 class ArticleCreateView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [IsAdmin, IsEditor]
+    authentication_classes = [IsAdmin, IsEditor, IsModerator]
 
     def get_user(self, authorization=None):
         if authorization and authorization.startswith('Bearer '):
@@ -50,41 +52,31 @@ class ArticleCreateView(APIView):
         return Response("Authorization header required.", status=status.HTTP_401_UNAUTHORIZED)
 
     def post(self, request):
-        user = self.get_user(request.headers.get('Authorization', None))
+        user = get_user_from_token(request.headers.get('Authorization', None))
         serializer = ArticleSerializer(data=request.data)
         if not user:
             return Response(
-                data={"status": "error", "message": "Only certain users are allowed to perform this action."})
+                data={status.HTTP_403_FORBIDDEN})
         if serializer.is_valid():
             serializer.save(created_by=user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, exception=True)
 
-    def patch(self, request, pk=None):
-        self.get_user(request.headers.get('Authorization'))
-        article = Article.objects.filter(pk=pk, hide=False)
-        serializer = ArticleSerializer(article, data=request.data, partial=True)
+    def patch(self, request):
+        slug = request.query_params.get('slug', None)
+        article = Article.objects.get(slug=slug, hide=False)
+        print(article)
+        serializer = ArticleUpdateSerializer(article, data=request.data, partial=True)
 
         if serializer.is_valid():
-            if 'approved_by' in request.data:
-                self.approve_article(article, request.user)
-            elif 'published' in request.data and request.data['published'] is True:
-                self.publish_article(article)
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def publish_article(self, article):
-        if not article.published:
-            article.published = True
-            article.published_on = timezone.now()
-            article.save()
-
-    def approve_article(self, article, user):
-        if not article.approved_by:
-            article.approved_by = user
-            article.approved_on = timezone.now()
-            article.save()
+    def delete(self, request, slug):
+        article = self.get_object(slug)
+        ArticleSerializer(article, data={"hide": True})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AuthorArticleListView(APIView):
@@ -118,26 +110,13 @@ class ArticleDetailView(APIView):
         serializer = ArticleSerializer(article)
         return Response(serializer.data, status.HTTP_200_OK)
 
-    def put(self, request, slug):
-        article = self.get_object(slug)
-        serializer = ArticleSerializer(article, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, slug):
-        article = self.get_object(slug)
-        ArticleSerializer(article, data={"hide": True})
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 class UserListView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
     def get(self, request):
-        users = Reader.objects.filter(active=True)
+        users = User.objects.filter(is_active=True)
         serializer = UserSerializer(users, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 

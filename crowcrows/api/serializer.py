@@ -3,6 +3,7 @@ from crowapp.models import (
     User,
 )
 from blog.models import Article
+from django.utils import timezone
 
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
@@ -30,7 +31,10 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 class UserSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = User
-        exclude = ['password', ]
+        fields = '__all__'
+        extra_kwargs = {
+            'password': {'write_only': True, 'min_length': 8},
+        }
 
 
 class ArticleSerializer(serializers.ModelSerializer):
@@ -39,3 +43,27 @@ class ArticleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Article
         fields = '__all__'
+
+
+class ArticleUpdateSerializer(serializers.ModelSerializer):
+    created_by = UserSerializer(read_only=True, fields=('id', 'first_name', 'last_name', 'profile_img'))
+
+    def update(self, instance, validated_data):
+        print(repr(instance))
+        if 'approved_by' in validated_data and not instance.approved_by:
+            instance.approved_by = validated_data['approved_by']
+            instance.approved_on = timezone.now()
+
+        if 'published' in validated_data and validated_data['published'] is True and not instance.published:
+            instance.published = True
+            instance.published_on = timezone.now()
+
+        return super().update(instance, validated_data)
+
+    class Meta:
+        model = Article
+        fields = '__all__'
+        read_only_fields = ['title', 'content', 'slug', 'created_by', 'created_on']
+        extra_kwargs = {
+            'approved_by': {'write_only': True},
+        }
