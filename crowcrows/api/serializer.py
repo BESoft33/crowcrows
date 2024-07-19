@@ -30,7 +30,10 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
 class UserSerializer(DynamicFieldsModelSerializer):
     class Meta:
         model = User
-        exclude = ['password', ]
+        fields = '__all__'
+        extra_kwargs = {
+            'password': {'write_only': True, 'min_length': 8},
+        }
 
 
 class ArticleSerializer(serializers.ModelSerializer):
