@@ -1,18 +1,17 @@
+from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 from django.utils import timezone
-from rest_framework_simplejwt.tokens import AccessToken
 
 from .auth import IsAdmin, IsEditor
 from .serializer import (
     ArticleSerializer,
     UserSerializer,
-    ArticleUpdateSerializer,
+    ArticleUpdateSerializer, ArticlePublishOrApproveSerializer,
 )
 from crowapp.mixins import ActivityLogMixin
 from crowapp.models import (
@@ -38,18 +37,7 @@ class ArticleListView(APIView):
 
 class ArticleCreateView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [IsAdmin, IsEditor, IsModerator]
-
-    def get_user(self, authorization=None):
-        if authorization and authorization.startswith('Bearer '):
-            token = authorization.split(' ')[1]
-            try:
-                access_token = AccessToken(token)
-                user_id = access_token['user_id']
-                return Author.objects.get(id=user_id)
-            except ObjectDoesNotExist:
-                return None
-        return Response("Authorization header required.", status=status.HTTP_401_UNAUTHORIZED)
+    authentication_classes = [IsAuthor]
 
     def post(self, request):
         user = get_user_from_token(request.headers.get('Authorization', None))
@@ -63,10 +51,12 @@ class ArticleCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, exception=True)
 
     def patch(self, request):
-        slug = request.query_params.get('slug', None)
-        article = Article.objects.get(slug=slug, hide=False)
-        print(article)
-        serializer = ArticleUpdateSerializer(article, data=request.data, partial=True)
+        slug = request.query_params.get('q', None)
+        article = Article.objects.get(slug=slug)
+        if 'title' or 'content' in request.data:
+            serializer = ArticleUpdateSerializer(article, data=request.data, partial=True)
+        else:
+            serializer = ArticlePublishOrApproveSerializer(article, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
@@ -74,13 +64,14 @@ class ArticleCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, slug):
-        article = self.get_object(slug)
+        article = Article.objects.get(slug=slug)
         ArticleSerializer(article, data={"hide": True})
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AuthorArticleListView(APIView):
     authentication_classes = []
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         articles = Article.objects.filter(created_by=request.user)
@@ -112,8 +103,8 @@ class ArticleDetailView(APIView):
 
 
 class UserListView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [IsAdmin, IsModerator]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         users = User.objects.filter(is_active=True)
@@ -122,8 +113,8 @@ class UserListView(APIView):
 
 
 class UserDetailsView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [IsAdmin, IsModerator]
+    permission_classes = [IsAuthenticated]
     serializer_class = UserSerializer
 
     def get_object(self, pk):
@@ -139,7 +130,7 @@ class UserDetailsView(APIView):
             return Response(serializer.data)
         raise User.DoesNotExist
 
-    def put(self, request, pk):
+    def patch(self, request, pk):
         user = self.get_object(pk)
         serializer = UserSerializer(user, request.data, partial=True)
         if serializer.is_valid():
@@ -157,8 +148,8 @@ class UserDetailsView(APIView):
 
 
 class AuthorListView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [IsAdmin, IsModerator]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         users = Author.objects.filter(active=True)
@@ -174,8 +165,8 @@ class AuthorListView(APIView):
 
 
 class AuthorDetailsView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [IsAdmin, IsModerator, IsEditor]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
         try:
@@ -188,7 +179,7 @@ class AuthorDetailsView(APIView):
         serializer = UserSerializer(user)
         return Response(serializer.data)
 
-    def put(self, request, pk):
+    def patch(self, request, pk):
         user = self.get_object(pk)
         serializer = UserSerializer(user, request.data)
         if serializer.is_valid():
@@ -198,13 +189,13 @@ class AuthorDetailsView(APIView):
 
     def delete(self, request, pk):
         user = self.get_object(pk)
-        user.delete()
+        UserSerializer(user, {"is_active": False})
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class EditorListView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [IsAdmin, IsModerator]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         users = Editor.objects.all()
@@ -220,8 +211,8 @@ class EditorListView(APIView):
 
 
 class EditorDetailsView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [IsAdmin, IsModerator, IsEditor]
+    permission_classes = [IsAuthenticated]
 
     def get_object(self, pk):
         try:
@@ -244,7 +235,7 @@ class EditorDetailsView(APIView):
 
     def delete(self, request, pk):
         user = self.get_object(pk)
-        serializer = UserSerializer(user, {"is_active": False})
+        UserSerializer(user, {"is_active": False})
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
