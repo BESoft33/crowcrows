@@ -45,11 +45,10 @@ class ArticleSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ArticleUpdateSerializer(serializers.ModelSerializer):
+class ArticlePublishOrApproveSerializer(serializers.ModelSerializer):
     created_by = UserSerializer(read_only=True, fields=('id', 'first_name', 'last_name', 'profile_img'))
 
     def update(self, instance, validated_data):
-        print(repr(instance))
         if 'approved_by' in validated_data and not instance.approved_by:
             instance.approved_by = validated_data['approved_by']
             instance.approved_on = timezone.now()
@@ -67,3 +66,18 @@ class ArticleUpdateSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'approved_by': {'write_only': True},
         }
+
+
+class ArticleUpdateSerializer(serializers.ModelSerializer):
+
+    def update(self, instance, validated_data):
+        if 'published' in validated_data and validated_data['published'] is True and not instance.published:
+            instance.published = True
+            instance.published_on = timezone.now()
+
+        instance.updated_on = timezone.now()
+
+    class Meta:
+        model = Article
+        fields = '__all__'
+        read_only_fields = ['id', 'slug', 'created_by', 'created_on', 'approved_on', 'approved_by', 'hide']
