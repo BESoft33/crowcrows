@@ -252,14 +252,12 @@ class PostReadOnlyViewSet(ActivityLogMixin, ReadOnlyModelViewSet):
 
 
 class StatsView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAdmin, IsModerator]
+    authentication_classes = [IsAuthenticated]
 
     def get(self, request):
         filter_params = request.query_params.get('filter', 'all')
-
         now = timezone.now()
-
         filter_mapping = {
             'daily': Q(published_on__date=now.date()),
             'weekly': Q(published_on__week=now.isocalendar()[1], published_on__year=now.year),

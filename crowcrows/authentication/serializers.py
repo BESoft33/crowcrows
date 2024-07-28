@@ -2,6 +2,7 @@ from rest_framework import serializers
 from crowapp.models import User
 from django.core.exceptions import ValidationError
 
+
 class SignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     password_confirm = serializers.CharField(write_only=True)
@@ -25,3 +26,16 @@ class SignupSerializer(serializers.ModelSerializer):
             password=validated_data.get('password')
         )
         return user
+
+
+class LoginSerializer(serializers.ModelSerializer):
+    serializer_class = []
+    permission_classes = []
+    authentication_classes = []
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'role', 'is_active')
+
