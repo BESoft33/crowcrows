@@ -1,7 +1,7 @@
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.hashers import check_password
 from rest_framework import exceptions
 from rest_framework_simplejwt.exceptions import TokenError
-
 from rest_framework_simplejwt.tokens import RefreshToken, BlacklistMixin
 
 from rest_framework.views import APIView
@@ -9,9 +9,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from .serializers import SignupSerializer, UserSerializer
+from .serializers import SignupSerializer, UserSerializer, PasswordResetSerializer
 from django.db import IntegrityError
 from .utils import get_tokens_for_user
+
+User = get_user_model()
 
 
 class SignupView(APIView):
@@ -54,7 +56,7 @@ class LoginView(APIView):
         email = request.data.get('email')
         password = request.data.get('password')
         response = Response()
-        if (email is None) or (password is None):
+        if not email or not password:
             raise exceptions.AuthenticationFailed('username and password required')
 
         user = authenticate(request, email=email, password=password)
@@ -69,5 +71,33 @@ class LoginView(APIView):
             'refresh': refresh,
             'data': data
         }
-        print(response.data)
         return response
+
+
+class PasswordForgotView(APIView):
+    pass
+
+
+class PasswordResetView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            user = authenticate(request, email=request.data['email'], password=request.data['password'])
+            print(request.data)
+            print(check_password(user, request.data['password']))
+            if user:
+                serializer = PasswordResetSerializer(user, request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(str(serializer))
+            else:
+                raise User.DoesNotExist(
+                    "Please enter correct combination of email and password to change your password."
+                )
+        except Exception as e:
+            return Response(str(e))
+
+
+
