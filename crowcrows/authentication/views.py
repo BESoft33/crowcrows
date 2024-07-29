@@ -55,7 +55,7 @@ class LoginView(APIView):
         email = request.data.get('email')
         password = request.data.get('password')
         response = Response()
-        if (email is None) or (password is None):
+        if not email or not password:
             raise exceptions.AuthenticationFailed('username and password required')
 
         user = authenticate(request, email=email, password=password)
