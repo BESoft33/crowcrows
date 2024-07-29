@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from rest_framework import exceptions
+from rest_framework_simplejwt.exceptions import TokenError
 
 from rest_framework_simplejwt.tokens import RefreshToken, BlacklistMixin
 
@@ -41,8 +42,8 @@ class LogoutView(APIView, BlacklistMixin):
             token = RefreshToken(refresh_token)
             token.blacklist()
             return Response({'status': 'success', 'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response(e, status=status.HTTP_400_BAD_REQUEST)
+        except TokenError as e:
+            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LoginView(APIView):
