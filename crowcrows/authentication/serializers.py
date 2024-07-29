@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from crowapp.models import User
 from django.core.exceptions import ValidationError
+from django.contrib.auth.hashers import make_password
 
 
 class SignupSerializer(serializers.ModelSerializer):
@@ -39,3 +40,19 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'email', 'role', 'is_active')
 
+
+class PasswordResetSerializer(serializers.ModelSerializer):
+    new_password = serializers.CharField(write_only=True)
+
+    def update(self, instance, validated_data):
+        instance.set_password(validated_data['new_password'])
+        instance.save()
+        return instance
+
+    class Meta:
+        model = User
+        fields = ('id', 'email', 'password', 'new_password')
+        read_only_fields = ('id', 'email')
+        extra_kwargs = {
+            'password': {'write_only': True},
+        }
