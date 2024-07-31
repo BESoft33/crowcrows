@@ -3,7 +3,7 @@ from django.utils.text import slugify
 
 from django_ckeditor_5.fields import CKEditor5Field
 
-from crowapp.models import Author, Editor
+from users.models import Author, Editor
 
 
 class Article(models.Model):

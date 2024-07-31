@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class CrowappConfig(AppConfig):
+class UsersConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'crowapp'
+    name = 'users'  # updated app name to users
 
     def ready(self):
-        import crowapp.signals
+        pass

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from crowapp.models import User
+from users.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.auth.hashers import make_password
 

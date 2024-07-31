@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'crowapp',
+    'users',
     'api',
     'authentication',
     'blog',
@@ -62,7 +62,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'crowcrows.urls'
 
-TEMPLATE_DIR = BASE_DIR / 'crowapp/templates'
+TEMPLATE_DIR = BASE_DIR / 'users/templates'
 
 TEMPLATES = [
     {
@@ -87,8 +87,12 @@ WSGI_APPLICATION = 'crowcrows.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'crowcrows',
+        'USER': 'mysqluser',
+        'PASSWORD': 'mysqlpassword',
+        'HOST': 'db',
+        'PORT': '3306',
     }
 }
 
@@ -147,7 +151,6 @@ CORS_ALLOW_HEADERS = [
     'dnt',
     'origin',
     'user-agent',
-    'x-csrftoken',  # Add 'x-csrftoken' to the allowed headers
 ]
 REST_AUTH = {
     "USE_JWT": True,
@@ -185,15 +188,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
-STATIC_URL = 'crowapp/static/'
+STATIC_URL = 'users/static/'
 HIGHLIGHT_URL = 'highlight/'
 
-MEDIA_URL = 'crowapp/media/'
+MEDIA_URL = 'users/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-
 STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, "crowapp/static"),
+    os.path.join(BASE_DIR, "users/static"),
 )
 
 # Default primary key field type
@@ -203,11 +205,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
-AUTH_USER_MODEL = 'crowapp.User'
+AUTH_USER_MODEL = 'users.User'
 
 CKEDITOR_5_CONFIGS = CKEDITOR_5_CONFIGS
 CKEDITOR_UPLOAD_PATH = "/media/uploads/"
 # CKEDITOR_ALLOW_NONIMAGE_FILES = False
-
-
-

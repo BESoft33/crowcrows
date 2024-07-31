@@ -1,7 +1,7 @@
 from django.db.models import Q
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework import status, exceptions
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from django.http import Http404
@@ -13,8 +13,8 @@ from .serializer import (
     UserSerializer,
     ArticleUpdateSerializer, ArticlePublishOrApproveSerializer,
 )
-from crowapp.mixins import ActivityLogMixin
-from crowapp.models import (
+from users.mixins import ActivityLogMixin
+from users.models import (
     User,
     Author,
     Editor,
@@ -35,28 +35,21 @@ class ArticleListView(APIView):
         return Response(serializer.data)
 
 
-class ArticleCreateView(APIView):
+class ArticleView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [IsAuthor]
+    authentication_classes = [IsAuthor, IsAdmin]
 
     def post(self, request):
-        user = get_user_from_token(request.headers.get('Authorization', None))
         serializer = ArticleSerializer(data=request.data)
-        if not user:
-            return Response(
-                data={status.HTTP_403_FORBIDDEN})
         if serializer.is_valid():
-            serializer.save(created_by=user)
+            serializer.save(created_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, exception=True)
 
     def patch(self, request):
         slug = request.query_params.get('q', None)
         article = Article.objects.get(slug=slug)
-        if 'title' or 'content' in request.data:
-            serializer = ArticleUpdateSerializer(article, data=request.data, partial=True)
-        else:
-            serializer = ArticlePublishOrApproveSerializer(article, data=request.data, partial=True)
+        serializer = ArticleUpdateSerializer(article, data=request.data, partial=True)
 
         if serializer.is_valid():
             serializer.save()
@@ -70,7 +63,7 @@ class ArticleCreateView(APIView):
 
 
 class AuthorArticleListView(APIView):
-    authentication_classes = []
+    authentication_classes = [IsAuthor, IsAdmin]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
