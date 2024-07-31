@@ -1,4 +1,18 @@
 services:
+  db:
+    image: mysql
+    ports:
+      - 3306:3306
+    restart: always
+    environment:
+      MYSQL_DATABASE: crowcrows
+      MYSQL_USER: mysqluser
+      MYSQL_PORT: 3306
+      MYSQL_PASSWORD: mysqlpassword
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysqldb:/var/lib/crowcrows/data
+
   web:
     build:
       dockerfile: Dockerfile
@@ -11,14 +25,5 @@ services:
     depends_on:
       - db
 
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgresuser
-      POSTGRES_PASSWORD: postgrespassword
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
 volumes:
-  postgres_data:
+  mysqldb:

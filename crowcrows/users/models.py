@@ -31,7 +31,8 @@ class User(AbstractUser):
         ADMIN = 4, _("Admin")
         READER = 5, _("Reader")
 
-    username = None  # To avoid errors because the django team decided to keep default username field required even if I set USERNAME_FIELD to email.
+    username = None  # To avoid errors because the django team decided to keep default username field required even
+    # if I set USERNAME_FIELD to email.
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
     display_name = models.CharField(max_length=255, blank=True, null=True)

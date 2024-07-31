@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('crowapp', '0002_reader_alter_user_role'),
+        ('users', '0003_alter_user_role'),
     ]
 
     operations = [
         migrations.AlterField(
             model_name='user',
             name='role',
-            field=models.PositiveSmallIntegerField(choices=[(1, 'Author'), (2, 'Editor'), (3, 'Moderator'), (4, 'Admin'), (5, 'Reader')], default=5, max_length=25),
+            field=models.PositiveSmallIntegerField(choices=[(1, 'Author'), (2, 'Editor'), (3, 'Moderator'), (4, 'Admin'), (5, 'Reader')], default=5),
         ),
     ]

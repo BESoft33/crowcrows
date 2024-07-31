@@ -10,7 +10,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('crowapp', '0001_initial'),
+        ('users', '0001_initial'),
     ]
 
     operations = [
@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('created_on', models.DateTimeField(auto_now=True)),
                 ('last_update_on', models.DateTimeField(auto_now_add=True)),
                 ('published_on', models.DateTimeField()),
-                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='crowapp.editor')),
+                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='users.editor')),
             ],
         ),
         migrations.CreateModel(
@@ -41,8 +41,8 @@ class Migration(migrations.Migration):
                 ('approved_on', models.DateTimeField(blank=True, null=True)),
                 ('created_on', models.DateTimeField(auto_now=True)),
                 ('updated_on', models.DateTimeField(auto_now_add=True)),
-                ('approved_by', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='approved_by', to='crowapp.editor')),
-                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='author', to='crowapp.author')),
+                ('approved_by', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.DO_NOTHING, related_name='approved_by', to='users.editor')),
+                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='author', to='users.author')),
             ],
         ),
     ]

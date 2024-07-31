@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from crowapp.models import (
+from users.models import (
     User,
 )
 from blog.models import Article
@@ -38,7 +38,7 @@ class UserSerializer(DynamicFieldsModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True, fields=('id', 'first_name', 'last_name', 'profile_img'))
+    created_by = UserSerializer(read_only=True, fields=('id','email', 'first_name', 'last_name', 'profile_img'))
 
     class Meta:
         model = Article
@@ -71,11 +71,17 @@ class ArticlePublishOrApproveSerializer(serializers.ModelSerializer):
 class ArticleUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
-        if 'published' in validated_data and validated_data['published'] is True and not instance.published:
-            instance.published = True
+        # Update published_on if the article is published
+        if validated_data.get('published', instance.published):
             instance.published_on = timezone.now()
 
+        # Always update the updated_on field
         instance.updated_on = timezone.now()
+
+        # Call the superclass method to handle the update
+        instance = super().update(instance, validated_data)
+
+        return instance
 
     class Meta:
         model = Article
