@@ -1,9 +1,10 @@
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import check_password
-from rest_framework import exceptions
-from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken, BlacklistMixin
 
+from rest_framework import exceptions
+from rest_framework.exceptions import AuthenticationFailed, NotAuthenticated, PermissionDenied, ValidationError
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken, BlacklistMixin, AccessToken
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -34,18 +35,19 @@ class SignupView(APIView):
         return Response({'status': 'error', 'message': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class LogoutView(APIView, BlacklistMixin):
-    permission_classes = [AllowAny]
-    authentication_classes = []
+class LogoutView(APIView, BlacklistMixin, AccessToken):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def post(self, request, *args, **kwargs):
         try:
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({'status': 'success', 'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
-        except TokenError as e:
-            return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(data={'status': 'success', 'message': 'Successfully logged out.'},
+                            status=status.HTTP_200_OK)
+        except TokenError:
+            raise NotAuthenticated("Only logged in users can perform this action.")
 
 
 class LoginView(APIView):
@@ -79,25 +81,19 @@ class PasswordForgotView(APIView):
 
 
 class PasswordResetView(APIView):
-    authentication_classes = []
-    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        try:
-            user = authenticate(request, email=request.data['email'], password=request.data['password'])
-            print(request.data)
-            print(check_password(user, request.data['password']))
-            if user:
-                serializer = PasswordResetSerializer(user, request.data)
-                if serializer.is_valid():
-                    serializer.save()
-                    return Response(str(serializer))
-            else:
-                raise User.DoesNotExist(
-                    "Please enter correct combination of email and password to change your password."
-                )
-        except Exception as e:
-            return Response(str(e))
-
-
-
+        user = authenticate(request, email=request.data['email'], password=request.data['password'])
+        if user is None:
+            raise AuthenticationFailed()
+        if user == request.user:
+            if user.check_password(request.data['new_password']):
+                raise PermissionDenied("Cannot use current password as a new password.")
+            serializer = PasswordResetSerializer(user, request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+        else:
+            raise PermissionDenied()

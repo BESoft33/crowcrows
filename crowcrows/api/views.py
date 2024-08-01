@@ -81,7 +81,7 @@ class AuthorArticleListView(APIView):
 
 class ArticleDetailView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get_object(self, slug):
         try:
@@ -245,8 +245,8 @@ class PostReadOnlyViewSet(ActivityLogMixin, ReadOnlyModelViewSet):
 
 
 class StatsView(APIView):
-    permission_classes = [IsAdmin, IsModerator]
-    authentication_classes = [IsAuthenticated]
+    authentication_classes = [IsAdmin, IsModerator]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         filter_params = request.query_params.get('filter', 'all')
