@@ -27,7 +27,7 @@ class SignupView(APIView):
             try:
                 serializer.save()
                 return Response({'status': 'success', 'redirect_url': 'login', 'data': serializer.data},
-                                status=status.HTTP_201_CREATED)
+                                status=status.HTTP_200_OK)
             except IntegrityError:
                 return Response(
                     {'status': 'error', 'message': 'An account with the provided email address already exists.'},
@@ -57,22 +57,23 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        response = Response()
         if not email or not password:
             raise exceptions.AuthenticationFailed('username and password required')
 
         user = authenticate(request, email=email, password=password)
         if user:
             refresh, access = get_tokens_for_user(user)
-            data = UserSerializer(user).data
+            user = UserSerializer(user).data
         else:
             raise exceptions.AuthenticationFailed("Email and password mismatch.")
+        response = Response(data={
+                'access': access,
+                'refresh': refresh,
+                'user': user
+            },
+            status=status.HTTP_200_OK
+        )
         response.set_cookie(key='refresh', value=refresh, httponly=True)
-        response.data = {
-            'access': access,
-            'refresh': refresh,
-            'data': data
-        }
         return response
 
 
