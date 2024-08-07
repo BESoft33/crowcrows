@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Q, Count
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status, exceptions
@@ -11,7 +11,7 @@ from .auth import IsAdmin, IsEditor
 from .serializer import (
     ArticleSerializer,
     UserSerializer,
-    ArticleUpdateSerializer, ArticlePublishOrApproveSerializer,
+    ArticleUpdateSerializer, ArticlePublishOrApproveSerializer, StatisticsSerializer,
 )
 from users.mixins import ActivityLogMixin
 from users.models import (
@@ -43,7 +43,7 @@ class ArticleView(APIView):
         serializer = ArticleSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(created_by=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST, exception=True)
 
     def patch(self, request):
@@ -81,7 +81,7 @@ class AuthorArticleListView(APIView):
 
 class ArticleDetailView(APIView):
     authentication_classes = []
-    permission_classes = []
+    permission_classes = [AllowAny]
 
     def get_object(self, slug):
         try:
@@ -245,32 +245,52 @@ class PostReadOnlyViewSet(ActivityLogMixin, ReadOnlyModelViewSet):
 
 
 class StatsView(APIView):
-    permission_classes = [IsAdmin, IsModerator]
-    authentication_classes = [IsAuthenticated]
+    authentication_classes = [IsAdmin, IsModerator]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        filter_params = request.query_params.get('filter', 'all')
         now = timezone.now()
-        filter_mapping = {
-            'daily': Q(published_on__date=now.date()),
-            'weekly': Q(published_on__week=now.isocalendar()[1], published_on__year=now.year),
-            'monthly': Q(published_on__month=now.month, published_on__year=now.year),
-            'all': Q()
-        }
 
-        filter_query = filter_mapping.get(filter_params, Q())
-        queryset = Article.objects.filter(filter_query)
+        today_published = Count("id", filter=Q(published_on__date=now.date()))
+        this_month_published = Count("id", filter=Q(published_on__month=now.month, published_on__year=now.year))
+        this_year_published = Count("id", filter=Q(published_on__year=now.year))
+        total_published = Count("id", filter=Q(published=True, published_on__lte=now))
+        total_scheduled = Count("id", filter=Q(published=True, published_on__gt=now, approved_by__isnull=False))
+        asking_approval = Count("id", filter=Q(approved_by__isnull=False, published=True, published_on__gt=now))
+        total_unapproved = Count("id", filter=Q(approved_by__isnull=True, published=True, published_on__lte=now))
 
-        published_articles = queryset.filter(published=True)
-        scheduled_articles = Article.objects.filter(published_on__gt=now)
-        all_articles = Article.objects.exclude(published_on=None)
-        all_authors = all_articles.values('created_by').distinct()
+        article_stats = Article.objects.aggregate(
+            total_articles=Count("id"),
+            total_published=total_published,
+            total_scheduled=total_scheduled,
+            asking_approval=asking_approval,
+            total_approved=total_published,
+            total_unapproved=total_unapproved,
+            today_published=today_published,
+            this_month_published=this_month_published,
+            this_year_published=this_year_published,
+        )
+
+        active_authors_count = Author.objects.filter(is_active=True).count()
+        active_readers_count = Reader.objects.filter(is_active=True).count()
 
         data = {
-            'total_articles': all_articles.count(),
-            'published_articles': published_articles.count(),
-            'scheduled_articles': scheduled_articles.count(),
-            'total_authors': all_authors.count()
+            "article": {
+                "total_articles": article_stats["total_articles"],
+                "total_published": article_stats["total_published"],
+                "total_scheduled": article_stats["total_scheduled"],
+                "asking_approval": article_stats["asking_approval"],
+                "total_approved": article_stats["total_approved"],
+                "total_unapproved": article_stats["total_unapproved"],
+                "today_published": article_stats["today_published"],
+                "this_month_published": article_stats["this_month_published"],
+                "this_year_published": article_stats["this_year_published"],
+            },
+            "user_stats": {
+                "active_authors": active_authors_count,
+                "active_readers": active_readers_count,
+            }
         }
 
-        return Response(data)
+        serializer = StatisticsSerializer(data)
+        return Response(serializer.data)

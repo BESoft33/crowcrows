@@ -38,7 +38,7 @@ class UserSerializer(DynamicFieldsModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    created_by = UserSerializer(read_only=True, fields=('id','email', 'first_name', 'last_name', 'profile_img'))
+    created_by = UserSerializer(read_only=True, fields=('id', 'email', 'first_name', 'last_name', 'profile_img'))
 
     class Meta:
         model = Article
@@ -87,3 +87,25 @@ class ArticleUpdateSerializer(serializers.ModelSerializer):
         model = Article
         fields = '__all__'
         read_only_fields = ['id', 'slug', 'created_by', 'created_on', 'approved_on', 'approved_by', 'hide']
+
+
+class UserStatsSerializer(serializers.Serializer):
+    active_authors = serializers.IntegerField()
+    active_readers = serializers.IntegerField()
+
+
+class ArticleStatsSerializer(serializers.Serializer):
+    total_articles = serializers.IntegerField()
+    total_published = serializers.IntegerField()
+    total_scheduled = serializers.IntegerField()
+    asking_approval = serializers.IntegerField()
+    total_approved = serializers.IntegerField()
+    total_unapproved = serializers.IntegerField()
+    today_published = serializers.IntegerField()
+    this_month_published = serializers.IntegerField()
+    this_year_published = serializers.IntegerField()
+
+
+class StatisticsSerializer(serializers.Serializer):
+    article = ArticleStatsSerializer()
+    user_stats = UserStatsSerializer()

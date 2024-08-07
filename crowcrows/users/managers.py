@@ -1,5 +1,6 @@
 from django.contrib.auth import models
 from django.db.models.query import QuerySet
+from django.db.models import Q
 from . import models as user_models
 
 
@@ -50,7 +51,7 @@ class AuthorManager(models.UserManager):
 
 class ModeratorManager(models.UserManager):
     def get_queryset(self) -> QuerySet:
-        return super().get_queryset().filter(role=user_models.User.Role.MODERATOR, is_active=True)
+        return super().get_queryset().filter(Q(is_staff=True) | Q(user_models.User.Role.MODERATOR))
 
 
 class AdminManager(models.UserManager):
